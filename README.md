@@ -17,3 +17,11 @@ Finally generate the playground and run:
 go run github.com/99designs/gqlgen init
 go run server.go
 ```
+
+## Tips
+
+Once you have your schema ready, you can generate the code you need from
+typing 
+```bash
+go run github.com/99designs/gqlgen generate
+```

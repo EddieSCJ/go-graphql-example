@@ -6,19 +6,176 @@ package graph
 
 import (
 	"context"
-	"fmt"
-
 	"github.com/EddieSCJ/go-graphql-example/graph/model"
 )
 
-// CreateTodo is the resolver for the createTodo field.
-func (r *mutationResolver) CreateTodo(ctx context.Context, input model.NewTodo) (*model.Todo, error) {
-	panic(fmt.Errorf("not implemented: CreateTodo - createTodo"))
+// CreateCategory is the resolver for the createCategory field.
+func (r *mutationResolver) CreateCategory(ctx context.Context, input model.NewCategory) (*model.Category, error) {
+	category, err := r.CategoryDB.Create(input.Name, input.Description)
+	if err != nil {
+		return nil, err
+	}
+
+	response := &model.Category{
+		ID:          category.ID,
+		Name:        category.Name,
+		Description: &category.Description,
+	}
+
+	return response, nil
 }
 
-// Todos is the resolver for the todos field.
-func (r *queryResolver) Todos(ctx context.Context) ([]*model.Todo, error) {
-	panic(fmt.Errorf("not implemented: Todos - todos"))
+// CreateCourse is the resolver for the createCourse field.
+func (r *mutationResolver) CreateCourse(ctx context.Context, input model.NewCourse) (*model.Course, error) {
+	category, err := r.CategoryDB.Find(input.CategoryID)
+	if err != nil {
+		return nil, err
+	}
+
+	categoryQL := &model.Category{
+		ID:          category.ID,
+		Name:        category.Name,
+		Description: &category.Description,
+	}
+
+	course, err := r.CourseDB.Create(input.Name, *input.Description, input.CategoryID)
+	if err != nil {
+		return nil, err
+	}
+
+	response := &model.Course{
+		ID:          course.ID,
+		Name:        course.Name,
+		Description: &course.Description,
+		Category:    categoryQL,
+	}
+
+	return response, nil
+}
+
+// Categories is the resolver for the categories field.
+func (r *queryResolver) Categories(ctx context.Context) ([]*model.Category, error) {
+	categories, err := r.CategoryDB.FindAll()
+	if err != nil {
+		return nil, err
+	}
+
+	categoriesQL := make([]*model.Category, 0, len(categories))
+
+	for _, category := range categories {
+		courses, err := r.CourseDB.FindByCategoryID(category.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		coursesQL := make([]*model.Course, 0, len(courses))
+		for _, course := range courses {
+			coursesQL = append(coursesQL, &model.Course{
+				ID:          course.ID,
+				Name:        course.Name,
+				Description: &course.Description,
+			})
+		}
+
+		categoriesQL = append(categoriesQL, &model.Category{
+			ID:          category.ID,
+			Name:        category.Name,
+			Description: &category.Description,
+			Courses:     coursesQL,
+		})
+	}
+
+	return categoriesQL, nil
+}
+
+// Courses is the resolver for the courses field.
+func (r *queryResolver) Courses(ctx context.Context) ([]*model.Course, error) {
+	courses, err := r.CourseDB.FindAll()
+	if err != nil {
+		return nil, err
+	}
+
+	category, err := r.CategoryDB.Find(courses[0].CategoryID)
+	if err != nil {
+		return nil, err
+	}
+
+	categoryQL := &model.Category{
+		ID:          category.ID,
+		Name:        category.Name,
+		Description: &category.Description,
+	}
+
+	coursesQL := make([]*model.Course, 0, len(courses))
+	for _, course := range courses {
+		coursesQL = append(coursesQL, &model.Course{
+			ID:          course.ID,
+			Name:        course.Name,
+			Description: &course.Description,
+			Category:    categoryQL,
+		})
+	}
+
+	return coursesQL, nil
+}
+
+// Course is the resolver for the course field.
+func (r *queryResolver) Course(ctx context.Context, id string) (*model.Course, error) {
+	course, err := r.CourseDB.Find(id)
+	if err != nil {
+		return nil, err
+	}
+
+	category, err := r.CategoryDB.Find(course.CategoryID)
+	if err != nil {
+		return nil, err
+	}
+
+	categoryQL := &model.Category{
+		ID:          category.ID,
+		Name:        category.Name,
+		Description: &category.Description,
+	}
+
+	response := &model.Course{
+		ID:          course.ID,
+		Name:        course.Name,
+		Description: &course.Description,
+		Category:    categoryQL,
+	}
+
+	return response, nil
+}
+
+// Category is the resolver for the category field.
+func (r *queryResolver) Category(ctx context.Context, id string) (*model.Category, error) {
+	category, err := r.CategoryDB.Find(id)
+	if err != nil {
+		return nil, err
+	}
+
+	courses, err := r.CourseDB.FindByCategoryID(id)
+	if err != nil {
+		return nil, err
+	}
+
+	coursesQL := make([]*model.Course, 0, len(courses))
+	for _, course := range courses {
+		coursesQL = append(coursesQL, &model.Course{
+			ID:          course.ID,
+			Name:        course.Name,
+			Description: &course.Description,
+		})
+	}
+
+	response := &model.Category{
+		ID:          category.ID,
+		Name:        category.Name,
+		Description: &category.Description,
+		Courses:     coursesQL,
+	}
+
+	return response, nil
 }
 
 // Mutation returns MutationResolver implementation.
